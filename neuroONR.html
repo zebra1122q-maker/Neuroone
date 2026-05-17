@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Нейросеть-бот | Particles</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: #0f0c29;
+            transition: background 0.3s ease;
+            position: relative;
+        }
+
+        /* Canvas для партиклов */
+        #particles-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Светлая тема для canvas */
+        body.light-theme #particles-canvas {
+            opacity: 0.5;
+        }
+
+        .app-container {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            display: flex;
+            overflow: hidden;
+        }
+
+        body.light-theme .app-container {
+            background: rgba(255, 255, 255, 0.98);
+        }
+
+        /* Тёмная тема для контейнера */
+        body.dark-theme .app-container {
+            background: rgba(26, 26, 46, 0.95);
+        }
+
+        /* Боковое меню */
+        .chats-sidebar {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 280px;
+            height: 100%;
+            background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .chats-sidebar.open {
+            transform: translateX(0);
+        }
+
+        .sidebar-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 15;
+            display: none;
+        }
+
+        .sidebar-overlay.active {
+            display: block;
+        }
+
+        .sidebar-header {
+            padding: 20px 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-header h3 {
+            color: white;
+            font-size: 18px;
+            margin-bottom: 12px;
+        }
+
+        .new-chat-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 8px;
+        }
+
+        .export-chat-btn, .clear-chat-btn {
+            width: 100%;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 13px;
+            cursor: pointer;
+            margin-bottom: 8px;
+        }
+
+        .clear-chat-btn {
+            background: rgba(255, 107, 107, 0.2);
+            color: #ff9b9b;
+        }
+
+        .chats-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        .chat-item {
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .chat-item.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .chat-info {
+            flex: 1;
+        }
+
+        .chat-name {
+            color: white;
+            font-size: 13px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .chat-date {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 9px;
+            margin-top: 3px;
+        }
+
+        .delete-chat {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: #ff6b6b;
+            font-size: 14px;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+
+        /* Основной чат */
+        .chat-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .menu-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            font-size: 22px;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+        }
+
+        .header-center {
+            text-align: center;
+        }
+
+        .header-center h1 {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .header-center p {
+            font-size: 10px;
+            opacity: 0.9;
+        }
+
+        .header-right {
+            display: flex;
+            gap: 8px;
+        }
+
+        .theme-btn, .msg-count {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .msg-count {
+            font-size: 14px;
+            font-weight: 600;
+            width: auto;
+            padding: 0 12px;
+        }
+
+        .messages-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Стили для тёмной темы сообщений */
+        body.dark-theme .messages-area {
+            background: #1a1a2e;
+        }
+
+        body.dark-theme .bot .message-content {
+            background: #2d2d3a;
+            color: #e0e0e0;
+        }
+
+        body.dark-theme .user .message-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        body.dark-theme .input-area {
+            background: #1a1a2e;
+            border-top-color: #333;
+        }
+
+        body.dark-theme .input-area input {
+            background: #2d2d3a;
+            border-color: #444;
+            color: white;
+        }
+
+        body.dark-theme .input-area input::placeholder {
+            color: #888;
+        }
+
+        body.dark-theme .typing-indicator {
+            background: #2d2d3a;
+        }
+
+        body.light-theme .messages-area {
+            background: #f8f9ff;
+        }
+
+        .message {
+            margin-bottom: 16px;
+            display: flex;
+            position: relative;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message.bot {
+            justify-content: flex-start;
+        }
+
+        .message-content {
+            max-width: 85%;
+            padding: 10px 16px;
+            border-radius: 20px;
+            word-wrap: break-word;
+            line-height: 1.45;
+            font-size: 14px;
+        }
+
+        .user .message-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .bot .message-content {
+            background: white;
+            color: #1a1a2e;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .speak-small-btn {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #48bb78;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            width: 26px;
+            height: 26px;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+            z-index: 10;
+        }
+
+        .speak-small-btn.speaking {
+            background: #ff9800;
+            animation: blink 0.5s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .code-wrapper {
+            margin-top: 8px;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid #667eea30;
+        }
+
+        .code-header {
+            background: #2d2d2d;
+            padding: 6px 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .code-header span {
+            color: #ddd;
+            font-size: 11px;
+        }
+
+        .copy-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 3px 8px;
+            font-size: 10px;
+            cursor: pointer;
+        }
+
+        .code-content {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 11px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .input-area {
+            padding: 12px 16px;
+            background: white;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        .input-area input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1.5px solid #e9ecef;
+            border-radius: 30px;
+            font-size: 15px;
+            outline: none;
+            background: #f8f9ff;
+        }
+
+        .input-area input:focus {
+            border-color: #667eea;
+        }
+
+        .input-area button {
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            padding: 10px 14px;
+            background: white;
+            border-radius: 18px;
+            width: fit-content;
+        }
+
+        .typing-indicator span {
+            width: 6px;
+            height: 6px;
+            background: #667eea;
+            border-radius: 50%;
+            animation: wave 1.4s infinite;
+        }
+
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes wave {
+            0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+            30% { transform: translateY(-8px); opacity: 1; }
+        }
+
+        @media (max-width: 500px) {
+            .chats-sidebar { width: 260px; }
+            .message-content { max-width: 90%; font-size: 13px; padding: 8px 14px; }
+            .input-area button { padding: 10px 16px; font-size: 13px; }
+            .header-center h1 { font-size: 16px; }
+            .menu-btn, .theme-btn, .msg-count { width: 36px; height: 36px; font-size: 16px; }
+            .msg-count { width: auto; padding: 0 8px; }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="particles-canvas"></canvas>
+    
+    <div class="app-container">
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+        
+        <div class="chats-sidebar" id="chatsSidebar">
+            <div class="sidebar-header">
+                <h3>Мои чаты</h3>
+                <button class="new-chat-btn" onclick="createNewChat()">+ Новый чат</button>
+                <button class="export-chat-btn" onclick="exportCurrentChat()">Экспорт чата</button>
+                <button class="clear-chat-btn" onclick="clearCurrentChat()">Очистить чат</button>
+            </div>
+            <div class="chats-list" id="chatsList"></div>
+        </div>
+
+        <div class="chat-main">
+            <div class="chat-header">
+                <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+                <div class="header-center">
+                    <h1>NeuroONE</h1>
+                    <p>t.me/oniondlc</p>
+                </div>
+                <div class="header-right">
+                    <div class="msg-count" id="msgCount">0</div>
+                    <button class="theme-btn" onclick="toggleTheme()">🌙</button>
+                </div>
+            </div>
+
+            <div class="messages-area" id="messagesArea">
+                <div class="message bot">
+                    <div class="message-content">Привет! Я нейросеть от onionDLC</div>
+                </div>
+            </div>
+
+            <div class="input-area">
+                <input type="text" id="userInput" placeholder="Напишите сообщение..." onkeypress="if(event.key==='Enter') sendMessage()" autofocus>
+                <button onclick="sendMessage()">Отправить</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== ПАРТИКЛЫ ==========
+        const canvas = document.getElementById('particles-canvas');
+        let ctx = canvas.getContext('2d');
+        let particles = [];
+        let animationId = null;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 2 + 1;
+                this.speedX = (Math.random() - 0.5) * 0.5;
+                this.speedY = (Math.random() - 0.5) * 0.5;
+                this.color = `rgba(102, 126, 234, ${Math.random() * 0.5 + 0.2})`;
+            }
+            
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                
+                if (this.x < 0) this.x = canvas.width;
+                if (this.x > canvas.width) this.x = 0;
+                if (this.y < 0) this.y = canvas.height;
+                if (this.y > canvas.height) this.y = 0;
+            }
+            
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+            }
+        }
+
+        function initParticles() {
+            particles = [];
+            for (let i = 0; i < 80; i++) {
+                particles.push(new Particle());
+            }
+        }
+
+        function drawLines() {
+            for (let i = 0; i < particles.length; i++) {
+                for (let j = i + 1; j < particles.length; j++) {
+                    const dx = particles[i].x - particles[j].x;
+                    const dy = particles[i].y - particles[j].y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    if (distance < 120) {
+                        ctx.beginPath();
+                        ctx.strokeStyle = `rgba(102, 126, 234, ${0.15 * (1 - distance / 120)})`;
+                        ctx.lineWidth = 0.5;
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(particles[j].x, particles[j].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        function animateParticles() {
+            if (!ctx) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].update();
+                particles[i].draw();
+            }
+            drawLines();
+            
+            animationId = requestAnimationFrame(animateParticles);
+        }
+
+        function startParticles() {
+            resizeCanvas();
+            initParticles();
+            animateParticles();
+        }
+
+        window.addEventListener('resize', function() {
+            resizeCanvas();
+            initParticles();
+        });
+
+        startParticles();
+        // ========== КОНЕЦ ПАРТИКЛОВ ==========
+
+        const GITHUB_TOKEN = "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";
+        const MODEL = "gpt-4o";
+        
+        let chats = [];
+        let currentChatId = null;
+        let currentSpeech = null;
+
+        function loadChats() {
+            const saved = localStorage.getItem('neural_chats_particles');
+            if (saved) {
+                chats = JSON.parse(saved);
+            }
+            if (!chats || chats.length === 0) {
+                const now = new Date();
+                chats = [{
+                    id: Date.now(),
+                    name: 'Чат ' + now.toLocaleDateString(),
+                    created: now.toISOString(),
+                    messages: [{
+                        id: Date.now() + '_init',
+                        sender: 'bot',
+                        text: 'Привет!Я нейросеть от OnionDLC'
+                    }]
+                }];
+                saveChats();
+            }
+            currentChatId = chats[0].id;
+            renderChatsList();
+            renderCurrentChat();
+            updateMsgCount();
+        }
+
+        function saveChats() {
+            localStorage.setItem('neural_chats_particles', JSON.stringify(chats));
+        }
+
+        function renderChatsList() {
+            const container = document.getElementById('chatsList');
+            if (!container) return;
+            container.innerHTML = '';
+            for (let i = 0; i < chats.length; i++) {
+                const chat = chats[i];
+                const chatDiv = document.createElement('div');
+                chatDiv.className = 'chat-item';
+                if (currentChatId === chat.id) chatDiv.classList.add('active');
+                const date = new Date(chat.created);
+                const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString().slice(0,5);
+                chatDiv.innerHTML = '<div class="chat-info" onclick="switchChat(' + chat.id + ')">' +
+                    '<div class="chat-name">' + escapeHtml(chat.name) + '</div>' +
+                    '<div class="chat-date">' + dateStr + ' • ' + chat.messages.length + '</div>' +
+                    '</div>' +
+                    '<button class="delete-chat" onclick="deleteChat(' + chat.id + ', event)">🗑</button>';
+                container.appendChild(chatDiv);
+            }
+        }
+
+        function renderCurrentChat() {
+            const chat = getCurrentChat();
+            if (!chat) return;
+            const messagesArea = document.getElementById('messagesArea');
+            messagesArea.innerHTML = '';
+            for (let i = 0; i < chat.messages.length; i++) {
+                const msg = chat.messages[i];
+                addMessageToDOM(msg.text, msg.sender, false, msg.id);
+            }
+            updateMsgCount();
+        }
+
+        function getCurrentChat() {
+            for (let i = 0; i < chats.length; i++) {
+                if (chats[i].id === currentChatId) return chats[i];
+            }
+            return null;
+        }
+
+        function addMessageToDOM(text, sender, scroll, msgId) {
+            const messagesArea = document.getElementById('messagesArea');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message ' + sender;
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            
+            let processedText = text;
+            const htmlMatch = text.match(/```html\n?([\s\S]*?)\n?```/i);
+            if (htmlMatch && sender === 'bot') {
+                const htmlCode = htmlMatch[1];
+                const textWithoutCode = text.replace(/```html\n?[\s\S]*?\n?```/i, '').trim();
+                const codeBlock = '<div class="code-wrapper"><div class="code-header"><span>HTML</span><button class="copy-btn" onclick="copyCode(this)">Копировать</button></div><div class="code-content">' + escapeHtml(htmlCode) + '</div></div>';
+                processedText = (textWithoutCode ? textWithoutCode + '<br>' : '') + codeBlock;
+            }
+            
+            contentDiv.innerHTML = processedText.replace(/\n/g, '<br>');
+            messageDiv.appendChild(contentDiv);
+            
+            if (sender === 'bot') {
+                const cleanText = processedText.replace(/<[^>]*>/g, '');
+                messageDiv.setAttribute('data-msg-text', cleanText);
+                
+                const speakBtn = document.createElement('button');
+                speakBtn.className = 'speak-small-btn';
+                speakBtn.innerHTML = '🔊';
+                speakBtn.onclick = function(e) {
+                    e.stopPropagation();
+                    speakMessage(messageDiv);
+                };
+                messageDiv.appendChild(speakBtn);
+            }
+            
+            messagesArea.appendChild(messageDiv);
+            if (scroll !== false) {
+                messagesArea.scrollTop = messagesArea.scrollHeight;
+            }
+        }
+
+        function speakMessage(msgDiv) {
+            if (currentSpeech) {
+                window.speechSynthesis.cancel();
+                const btns = document.querySelectorAll('.speak-small-btn');
+                for (let i = 0; i < btns.length; i++) {
+                    btns[i].classList.remove('speaking');
+                }
+            }
+            
+            const text = msgDiv.getAttribute('data-msg-text');
+            if (!text) return;
+            
+            const btn = msgDiv.querySelector('.speak-small-btn');
+            btn.classList.add('speaking');
+            
+            currentSpeech = new SpeechSynthesisUtterance(text);
+            currentSpeech.lang = 'ru-RU';
+            currentSpeech.rate = 0.95;
+            currentSpeech.onend = function() {
+                btn.classList.remove('speaking');
+                currentSpeech = null;
+            };
+            currentSpeech.onerror = function() {
+                btn.classList.remove('speaking');
+                currentSpeech = null;
+            };
+            window.speechSynthesis.speak(currentSpeech);
+        }
+
+        function copyCode(btn) {
+            const codeDiv = btn.parentElement.nextElementSibling;
+            const code = codeDiv.innerText;
+            navigator.clipboard.writeText(code);
+            const original = btn.innerHTML;
+            btn.innerHTML = 'Готово';
+            setTimeout(function() {
+                btn.innerHTML = original;
+            }, 1500);
+        }
+
+        function exportCurrentChat() {
+            const chat = getCurrentChat();
+            if (!chat) return;
+            let exportText = 'Нейросеть-бот — Экспорт чата\nДата: ' + new Date().toLocaleString() + '\n\n';
+            for (let i = 0; i < chat.messages.length; i++) {
+                const msg = chat.messages[i];
+                const sender = msg.sender === 'user' ? 'Пользователь' : 'Нейросеть';
+                const cleanText = msg.text.replace(/<[^>]*>/g, '');
+                exportText += sender + ':\n' + cleanText + '\n\n';
+            }
+            const blob = new Blob([exportText], { type: 'text/plain' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'chat_export_' + new Date().toISOString().slice(0,19) + '.txt';
+            a.click();
+            URL.revokeObjectURL(a.href);
+        }
+
+        function clearCurrentChat() {
+            if (confirm('Очистить все сообщения в этом чате?')) {
+                const chat = getCurrentChat();
+                if (chat) {
+                    chat.messages = [{
+                        id: Date.now(),
+                        sender: 'bot',
+                        text: 'Привет!Я нейросеть от onionDLC'
+                    }];
+                    saveChats();
+                    renderCurrentChat();
+                    updateMsgCount();
+                    renderChatsList();
+                }
+            }
+        }
+
+        function addMessageToCurrentChat(text, sender) {
+            const chat = getCurrentChat();
+            if (chat) {
+                const newMsg = { id: Date.now() + '_' + Math.random(), text: text, sender: sender };
+                chat.messages.push(newMsg);
+                saveChats();
+                addMessageToDOM(text, sender, true, newMsg.id);
+                updateMsgCount();
+                renderChatsList();
+            }
+        }
+
+        function updateMsgCount() {
+            const chat = getCurrentChat();
+            if (chat) {
+                document.getElementById('msgCount').innerText = chat.messages.length;
+            }
+        }
+
+        function switchChat(chatId) {
+            if (currentSpeech) window.speechSynthesis.cancel();
+            currentChatId = chatId;
+            renderChatsList();
+            renderCurrentChat();
+            closeSidebar();
+            updateMsgCount();
+        }
+
+        function createNewChat() {
+            const now = new Date();
+            const newChat = {
+                id: Date.now(),
+                name: 'Чат ' + now.toLocaleDateString() + ' ' + now.toLocaleTimeString().slice(0,5),
+                created: now.toISOString(),
+                messages: [{ id: Date.now(), sender: 'bot', text: 'Привет! Я нейросеть от onionDLC' }]
+            };
+            chats.unshift(newChat);
+            currentChatId = newChat.id;
+            saveChats();
+            renderChatsList();
+            renderCurrentChat();
+            closeSidebar();
+            updateMsgCount();
+        }
+
+        function deleteChat(chatId, event) {
+            event.stopPropagation();
+            if (chats.length === 1) {
+                alert('Нельзя удалить последний чат');
+                return;
+            }
+            if (currentSpeech) window.speechSynthesis.cancel();
+            const newChats = [];
+            for (let i = 0; i < chats.length; i++) {
+                if (chats[i].id !== chatId) newChats.push(chats[i]);
+            }
+            chats = newChats;
+            if (currentChatId === chatId) currentChatId = chats[0].id;
+            saveChats();
+            renderChatsList();
+            renderCurrentChat();
+            updateMsgCount();
+        }
+
+        function toggleTheme() {
+            const isDark = document.body.classList.contains('dark-theme');
+            if (isDark) {
+                document.body.classList.remove('dark-theme');
+                document.body.classList.add('light-theme');
+                document.querySelector('.theme-btn').innerHTML = '🌙';
+                localStorage.setItem('theme', 'light');
+            } else {
+                document.body.classList.remove('light-theme');
+                document.body.classList.add('dark-theme');
+                document.querySelector('.theme-btn').innerHTML = '☀️';
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('chatsSidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
+        }
+
+        function closeSidebar() {
+            const sidebar = document.getElementById('chatsSidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.remove('open');
+            overlay.classList.remove('active');
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text.replace(/&/g, '&amp;')
+                      .replace(/</g, '&lt;')
+                      .replace(/>/g, '&gt;')
+                      .replace(/"/g, '&quot;')
+                      .replace(/'/g, '&#39;');
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('userInput');
+            const message = input.value.trim();
+            if (!message) return;
+            
+            if (!GITHUB_TOKEN || GITHUB_TOKEN.indexOf('ВАШ_ТОКЕН') !== -1) {
+                alert('Вставьте свой GitHub токен в код');
+                return;
+            }
+            
+            addMessageToCurrentChat(escapeHtml(message).replace(/\n/g, '<br>'), 'user');
+            input.value = '';
+            showTypingIndicator();
+            
+            try {
+                const response = await callGitHubModels(message);
+                removeTypingIndicator();
+                addMessageToCurrentChat(response, 'bot');
+            } catch (error) {
+                removeTypingIndicator();
+                let errorText = 'Ошибка';
+                if (error.message.indexOf('401') !== -1) errorText = 'Ошибка: токен недействителен';
+                else if (error.message.indexOf('429') !== -1) errorText = 'Лимит запросов, попробуйте позже';
+                else errorText = 'Ошибка: ' + error.message;
+                addMessageToCurrentChat(errorText, 'bot');
+            }
+        }
+
+        async function callGitHubModels(prompt) {
+            const systemPrompt = 'Ты полезный ассистент. Отвечай без смайликов, без эмодзи, без emoji. Твой ответ должен быть только текстом на русском языке. Если просят код - выдавай в формате ```html ... ```.';
+            
+            const response = await fetch('https://models.inference.ai.azure.com/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + GITHUB_TOKEN
+                },
+                body: JSON.stringify({
+                    model: MODEL,
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: prompt }
+                    ],
+                    temperature: 0.8,
+                    max_tokens: 2000
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error('' + response.status);
+            }
+            
+            const data = await response.json();
+            return data.choices[0].message.content;
+        }
+
+        function showTypingIndicator() {
+            const messagesArea = document.getElementById('messagesArea');
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'message bot';
+            typingDiv.id = 'typingIndicator';
+            typingDiv.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span><span style="margin-left:6px;">Думаю...</span></div>';
+            messagesArea.appendChild(typingDiv);
+            messagesArea.scrollTop = messagesArea.scrollHeight;
+        }
+
+        function removeTypingIndicator() {
+            const indicator = document.getElementById('typingIndicator');
+            if (indicator) indicator.remove();
+        }
+
+        window.copyCode = copyCode;
+        
+        loadChats();
+        document.getElementById('userInput').focus();
+        
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            document.body.classList.add('dark-theme');
+            document.querySelector('.theme-btn').innerHTML = '☀️';
+        } else {
+            document.body.classList.add('light-theme');
+            document.querySelector('.theme-btn').innerHTML = '🌙';
+        }
+        
+        document.addEventListener('click', function(e) {
+            const sidebar = document.getElementById('chatsSidebar');
+            const menuBtn = document.querySelector('.menu-btn');
+            if (sidebar && sidebar.classList.contains('open')) {
+                if (!sidebar.contains(e.target) && !menuBtn.contains(e.target)) {
+                    closeSidebar();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
